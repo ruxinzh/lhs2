@@ -6,9 +6,9 @@
 const
   ProcCount: 3;          -- number processors
   ValueCount: 2;
-  VC1: 0;                -- low priority
-  VC2: 1;
-  VC3: 2;                
+  VC0: 0;                -- low priority
+  VC1: 1;
+  VC2: 2;                
   VC3: 3;
   QMax: 2;
   NumVCs: VC3 - VC0 + 1;
@@ -19,10 +19,10 @@ const
 -- Types
 ----------------------------------------------------------------------
 type
-  Proc: scalarset(ProcCount);   -- unordered range of processors
-  Home: enum { HomeType };      -- need enumeration for IsMember calls
-  Node: union { Home , Proc }; -- arbitrary values for tracking coherence
-  Value: scalarset(ValueCount); -- need enumeration for IsMember calls
+  Proc: scalarset(ProcCount);  
+  Home: enum { HomeType };      
+  Node: union { Home , Proc }; 
+  Value: scalarset(ValueCount); 
 
   VCType: VC0..NumVCs-1;
 
@@ -115,7 +115,7 @@ Procedure ErrorUnhandledMsg(msg:Message; n:Node);
 Begin
   switch msg.mtype
   case GetM, GetS, WBReq:
-    msg_processed := false;  -- we can receive a raw request any time
+    msg_processed := false; 
   else
     error "Unhandled message type!";
   endswitch;
@@ -156,12 +156,9 @@ End;
 
 Procedure HomeReceive(msg:Message);
 var cnt:0..ProcCount;
-var cnthack:0..1;  -- subtracted from InvReq count to get around compiler
+var cnthack:0..1;  
 Begin
---  put "Receiving "; put msg.mtype; put " on VC"; put msg.vc; 
---  put " at home -- "; put HomeNode.state;
 
-  -- compiler barfs if we put this inside the switch
   cnt := MultiSetCount(i:HomeNode.sharers, true);
 
   if MultiSetCount(i:HomeNode.sharers, HomeNode.sharers[i] = msg.src) != 0
@@ -215,7 +212,6 @@ Begin
       Send(FwdGetM, HomeNode.owner, HomeType, VC3, msg.src,UNDEFINED,UNDEFINED);
       
     case WBReq:
-      --RemoveFromSharersList(msg.src);
       HomeNode.state := HI;
       HomeNode.val   := msg.val;
       HomeNode.owner := UNDEFINED;
@@ -236,12 +232,10 @@ Begin
       Send(GetSAck, msg.src, HomeType, VC3, UNDEFINED,HomeNode.val,UNDEFINED);
 
     case GetM:
-      --RemoveFromSharersList(msg.src);
       HomeNode.state := HM;
-      --HomeNode.owner := UNDEFINED;
       HomeNode.val   := msg.val;
       Send(GetMAck, msg.src, HomeType, VC3, UNDEFINED,UNDEFINED,cnt-cnthack);        
-      SendInvReqToSharers(msg.src); -- removes sharers, too
+      SendInvReqToSharers(msg.src); 
       HomeNode.owner := msg.src;
       
     else
@@ -255,7 +249,6 @@ Begin
     case FwdGetSAck:
       HomeNode.state := HS;
       AddToSharersList(msg.src);
-      --AddToSharersList(msg.aux);
       HomeNode.val := msg.val;
       undefine HomeNode.owner;
     
@@ -285,16 +278,13 @@ Begin
     case WBReq:
       if HomeNode.owner = msg.src
       then
-        -- old owner
         Assert (!IsUnDefined(HomeNode.pending_node)) "pending_node undefined";
 	Send(WBStaleWriteAck, msg.src, HomeType, VC3, UNDEFINED,UNDEFINED,UNDEFINED);
 	HomeNode.state := HM;
 	HomeNode.owner := HomeNode.pending_node;
-	--HomeNode.val   := msg.val;
 	undefine HomeNode.pending_node;
       elsif HomeNode.pending_node = msg.src
       then
-        -- new owner, queue or nack
 	msg_processed := false;
       else
         error "WBReq from unexpected node";
@@ -311,10 +301,6 @@ End;
 
 Procedure ProcReceive(msg:Message; p:Proc);
 Begin
---  put "Receiving "; put msg.mtype; put " on VC"; put msg.vc; 
---  put " at proc "; put p; put "\n";
-
-  -- default to 'processing' message.  set to false otherwise
   msg_processed := true;
 
   alias ps:Procs[p].state do
@@ -351,7 +337,6 @@ Begin
       Send(InvAck, msg.aux, p, VC3, UNDEFINED,UNDEFINED,UNDEFINED);
       ps := PI;
       pv := msg.val;
-    --  LastWrite := msg.val;
     else
       ErrorUnhandledMsg(msg, p);
     endswitch;
@@ -367,7 +352,6 @@ Begin
       if Procs[p].count1 = Procs[p].count2
       then
 	      ps := PM;
-             -- pv := msg.val;
               LastWrite := pv;
 	      undefine Procs[p].count1;
 	      undefine Procs[p].count2;
@@ -552,7 +536,7 @@ ruleset n:Proc Do
     (p.state = PS)
   ==>
     Send(GetM, HomeType, n, VC1, UNDEFINED,v,UNDEFINED);
-    p.state := IM;  -- collapsing states from Nikos' diagrams
+    p.state := IM;  
     p.val   := v;
     clear p.count1;
     clear p.count2;
@@ -561,7 +545,7 @@ ruleset n:Proc Do
   rule "writeback"
     (p.state = PM)
   ==>
-    Send(WBReq, HomeType, n, VC3, UNDEFINED,p.val,UNDEFINED);  -- fixme
+    Send(WBReq, HomeType, n, VC3, UNDEFINED,p.val,UNDEFINED);  
     p.state := TMI;
   endrule;
 
