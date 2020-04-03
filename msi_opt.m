@@ -82,8 +82,8 @@ type
                     PE,TEI,TEII,IEM,IEMI,  TISS  
                   };
       
-      acount: 0..ProcCount;
-      icount: 0..ProcCount;
+      count1: 0..ProcCount;
+      count2: 0..ProcCount;
       val:Value;
     End;
 
@@ -529,18 +529,18 @@ Begin
       ps := PM;
       LastWrite := msg.val;
     case GetMAck:
-      Procs[p].icount := msg.cnt;
-      if Procs[p].acount = Procs[p].icount
+      Procs[p].count2 := msg.cnt;
+      if Procs[p].count1 = Procs[p].count2
       then
 	      ps := PM;
               LastWrite := pv;
-	      undefine Procs[p].acount;
-	      undefine Procs[p].icount;
+	      undefine Procs[p].count1;
+	      undefine Procs[p].count2;
       else
         ps := IIM;
       endif;
     case InvAck:
-      Procs[p].acount := Procs[p].acount + 1;
+      Procs[p].count1 := Procs[p].count1 + 1;
     case InvReq:
       Send(InvAck, msg.aux, p, VC3, UNDEFINED, UNDEFINED,UNDEFINED);
     case FwdGetS:
@@ -619,7 +619,7 @@ case PE:
 	ps := PM;
      	LastWrite := pv;
     case InvAck:
-      Procs[p].acount := Procs[p].acount + 1;
+      Procs[p].count1 := Procs[p].count1 + 1;
     case InvReq:
       Send(InvAck, msg.aux, p, VC3, UNDEFINED, UNDEFINED,UNDEFINED);
     case FwdShareReq :
@@ -688,13 +688,13 @@ case PE:
 
     switch msg.mtype
     case InvAck:
-      Procs[p].acount := Procs[p].acount + 1;
-      if Procs[p].acount = Procs[p].icount
+      Procs[p].count1 := Procs[p].count1 + 1;
+      if Procs[p].count1 = Procs[p].count2
       then
 	      ps := PM;
               LastWrite := pv;
-	      undefine Procs[p].acount;
-	      undefine Procs[p].icount;
+	      undefine Procs[p].count1;
+	      undefine Procs[p].count2;
       endif
     case FwdGetS, FwdGetM:
       msg_processed := false;
@@ -855,8 +855,8 @@ ruleset n:Proc Do
     Send(GetM, HomeType, n, VC1, UNDEFINED,v, UNDEFINED);
     p.state := IM;
     p.val   := v;
-    clear p.acount;
-    clear p.icount;
+    clear p.count1;
+    clear p.count2;
   endrule;
 
   rule "write request PM"
@@ -880,8 +880,8 @@ ruleset n:Proc Do
     Send(GetM, HomeType, n, VC1, UNDEFINED,v,UNDEFINED);
     p.state := IM;  
     p.val   := v;
-    clear p.acount;
-    clear p.icount;
+    clear p.count1;
+    clear p.count2;
   endrule;
 
   rule "writeback"
@@ -962,8 +962,8 @@ LastWrite := HomeNode.val;
   -- processor initialization
   for i:Proc do
     Procs[i].state := PI;
-    clear Procs[i].icount;
-    clear Procs[i].acount;
+    clear Procs[i].count2;
+    clear Procs[i].count1;
   endfor;
 
   -- network initialization
